@@ -1,7 +1,8 @@
 
 from game import Game
-from numpy import copy, array, zeros
+from numpy import copy, array, zeros, clip, float32
 from numpy.random import RandomState
+from nnet import make_net
 
 
 def move_pred(game, predictions):
@@ -12,7 +13,7 @@ def move_pred(game, predictions):
 			break
 	else:
 		raise AssertionError('no legal moves')
-	return running
+	return running, dir
 
 
 class BaseAI():
@@ -33,7 +34,7 @@ class RandomAI(BaseAI):
 		running = True
 		while running:
 			predictions = self.random.rand(4)
-			running =   move_pred(self.game, predictions)
+			running = move_pred(self.game, predictions)[0]
 
 
 class StayDownAI(BaseAI):
@@ -44,7 +45,7 @@ class StayDownAI(BaseAI):
 		running = True
 		while running:
 			scores = array([1, 2, 1, 0])
-			running =   move_pred(self.game, scores)
+			running = move_pred(self.game, scores)[0]
 
 
 class FreeAI(BaseAI):
@@ -64,7 +65,7 @@ class FreeAI(BaseAI):
 				self.score(self.game.board_move(copy(self.game.M), 0, hor = False, dir = -1, test = False)[1])
 			])
 			scores[1] += 1
-			running =   move_pred(self.game, scores)
+			running = move_pred(self.game, scores)[0]
 
 
 class NeighbourAI(BaseAI):
@@ -82,17 +83,20 @@ class NeighbourAI(BaseAI):
 						S += abs(int(M[x, y]) - int(M[x, y + 1]))
 		return -S  # about 30
 
+	def play_step(self):
+		scores = array([
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = True, dir = +1, test = False)[1]),
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = False, dir = +1, test = False)[1]),
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = True, dir = -1, test = False)[1]),
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = False, dir = -1, test = False)[1])
+		])
+		scores[1] += 1
+		return move_pred(self.game, scores)
+
 	def play(self):
 		running = True
 		while running:
-			scores = array([
-				self.score(self.game.board_move(copy(self.game.M), 0, hor = True, dir = +1, test = False)[1]),
-				self.score(self.game.board_move(copy(self.game.M), 0, hor = False, dir = +1, test = False)[1]),
-				self.score(self.game.board_move(copy(self.game.M), 0, hor = True, dir = -1, test = False)[1]),
-				self.score(self.game.board_move(copy(self.game.M), 0, hor = False, dir = -1, test = False)[1])
-			])
-			scores[1] += 1
-			running =   move_pred(self.game, scores)
+			running = self.play_step()[0]
 
 
 class FreeNBDownAI(BaseAI):
@@ -124,12 +128,52 @@ class FreeNBDownAI(BaseAI):
 				-1,
 			])
 			scores[1] += 1
-			running =   move_pred(self.game, scores)
+			running = move_pred(self.game, scores)[0]
+
+
+class NNAI(BaseAI):
+	"""
+		Use Lasagne neural network to teach the AI to play.
+	"""
+	def __init__(self, game_kwargs = {}):
+		super().__init__(game_kwargs = game_kwargs)
+		self.nn = make_net(self.game.W, self.game.H)
+
+	def train(self, batch, results, choices):
+		wanted = self.nn.predict_proba(batch).astype(float32)
+		#print(wanted[:, choices].mean())
+		#print(abs(results).mean())
+		#wanted[:, choices] += results / 5
+		offset = zeros(wanted.shape, dtype = float32)
+		for k, choice in enumerate(choices):
+			offset[k, choice] = results[k] / 3
+		#print(Q)
+		#print(self.nn.predict_proba(batch) - wanted)
+		#print(choices)
+		goal = clip(wanted + offset, 0, 1)
+		print(self.nn.fit(batch, goal))
+
+	def predict(self, D):
+		"""
+			Predict one sample (no batches).
+
+			:param D: Flattened playing board
+		"""
+		if len(D.shape) == 1:
+			D = array([D])
+		return self.nn.predict_proba(D)[0]
+
+	def play(self):
+		running = True
+		while running:
+			D = array(self.game.M.flat)
+			scores = self.predict(D)
+			running = move_pred(self.game, scores)[0]
 
 
 if __name__ == '__main__':
 	N = 5
-	AIs = (RandomAI, FreeAI, NeighbourAI, StayDownAI, FreeNBDownAI)
+	AIs = (RandomAI, FreeAI, NeighbourAI, StayDownAI, FreeNBDownAI, NNAI)
 	print('comparing {0:d} AIs, {1:d} iterations each'.format(len(AIs), N))
 	print('AI name           turns  score    max')
 	for AI in AIs:
