@@ -12,6 +12,7 @@ class StopWhenOverfitting(object):
 	def __call__(self, nn, train_history):
 		if train_history[-1]['epoch'] > 10:
 			if train_history[-1]['train_loss'] / train_history[-1]['valid_loss'] < 0.8:
+				print('overfit')
 				raise StopIteration('overfitting')
 
 
@@ -27,32 +28,22 @@ class StopAfterMinimum(object):
 		if current_valid < self.best_valid:
 			self.best_valid = current_valid
 			self.best_valid_epoch = current_epoch
-			self.best_weights = copy(nn.get_all_params_values())
-		elif self.best_valid_epoch + 30 < current_epoch and self.best_weights:
-			nn.load_params_from(self.best_weights)
+			#self.best_weights = copy(nn.get_all_params_values())
+			#todo: restore old weights again (doesn't work somehow)
+		elif (self.best_valid_epoch + 20 < current_epoch):# and self.best_weights is not None:
+			#nn.load_params_from(self.best_weights)
+			print('loss inc')
 			raise StopIteration('loss increasing')
 
 
-class AdjustVariable(object):
-	def __init__(self, name, start = 1., stop = 0.005):
+class AdjustLearningRate(object):
+	def __init__(self, start = 1., stop = 0.01):
 		self.start, self.stop = start, stop
 
 	def __call__(self, nn, train_history):
 		epoch = train_history[-1]['epoch']
-		print(self.stop + (self.start - self.stop) * epoch / nn.max_epochs)
-		new_value = float32(self.stop + (self.start - self.stop) * epoch / nn.max_epochs)
+		new_value = float32(self.stop + (self.start - self.stop) * (1 - float(epoch) / nn.max_epochs))
 		getattr(nn, 'update_learning_rate').set_value(new_value)
-
-
-inp = InputLayer(shape = (None, 16,))
-DenseLayer(**{
-	'W': HeNormal(),
-	'nonlinearity': LeakyRectify(leakiness = 0.1),
-	'incoming': inp,
-	'num_units': 20,
-	'b': Constant(),
-	'name': 'dense1',
-}) #todo
 
 
 def make_net(W, H, size1 = 20, size2 = 15):
@@ -83,13 +74,14 @@ def make_net(W, H, size1 = 20, size2 = 15):
 
 		update = nesterov_momentum,  # todo
 		update_learning_rate = shared(float32(1.)),
-		update_momentum = 0.7,
+		update_momentum = 0.9,
 
 		max_epochs = 200,
-		#on_epoch_finished = [
-		#	StopWhenOverfitting(),
-		#	StopAfterMinimum(),
-		#],
+		on_epoch_finished = [
+			StopWhenOverfitting(),
+			StopAfterMinimum(),
+			AdjustLearningRate(1., 0.0001),
+		],
 
 		#label_encoder = False,
 		regression = True,

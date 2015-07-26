@@ -1,0 +1,7 @@
+
+Generates a lot of game states and with very simple heuristic bot. Cost is based on the score after X steps.
+Then train neural network on this data. Only the first iteration shows significant decrease in error. In actual play, performance is worse than untrained network (random).
+I didn't add other features or guidelines (like empty space, neighbours etc) because the goal is for the NN to learn.
+Overall it took about 10-12 hours and I'm out of time, so abandoning it for now.
+
+

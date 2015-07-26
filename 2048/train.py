@@ -1,45 +1,46 @@
 
 from sys import stdout
-from numpy import copy, array, log2, savez, load
+from numpy import copy, array, log2, savez, load, diff, zeros
 from numpy.random import permutation
 from AI import NeighbourAI, NNAI
+from os.path import exists
 
 
-def create_train(fname = 'traindata.npz', AI = NeighbourAI):
-	win_score = log2(2048) * 2048
-	boards, directions, scores = [], [], []
-	while len(boards) < 50000:
+def create_train(fname = 'traindata.npz', AI = NeighbourAI, foresight = 3):
+	boards, directions, results = [], [], []
+	while len(boards) < 1000000:#00
 		stdout.write('.'); stdout.flush()
 		gen = NeighbourAI({'quiet': True})
-		steps = []
+		steps, scores = [], []
 		running = True
 		while running:
 			steps.append(copy(gen.game.M.flat))
 			running, direction = gen.play_step()
 			directions.append(direction)
+			scores.append(gen.game.score)
 		boards.extend(steps)
-		scores.extend([gen.game.score] * len(steps))  #todo: update exponent
+		scoreinc = [(scores[k + foresight] - scores[k]) / (10. * foresight) for k in range(len(scores) - 3*foresight)]
+		scoreinc += [0]*foresight + [-6]*foresight + [-12]*foresight
+		results.extend(scoreinc)
 	stdout.write('\n')
-	f = permutation(len(scores))
-	boards, directions, scores = array(boards)[f], array(directions)[f], array(scores)[f]
-	errors = scores / float(win_score)
-	errors -= errors.mean()
-	errors /= errors.std()
-	savez(fname, boards = boards, errors = errors, scores = scores, directions = directions)
+	f = permutation(len(results))
+	boards, directions, results = array(boards)[f], array(directions)[f], array(results)[f]
+	savez(fname, boards = boards, directions = directions, results = results)
 
 
 def train_NN(fname = 'traindata.npz'):
-	net = NNAI()
+	net = NNAI(game_kwargs = {'quiet': True})
 	with load(fname) as data:
-		boards, errors, scores, directions = data['boards'], data['errors'], data['scores'], data['directions']
-	net.train(boards, errors, directions)
-	#for k in range(len(errors)):
-	#	print(net.predict(boards[k, :]))
-	#	break
+		boards, directions, results = data['boards'], data['directions'], data['results']
+	results -= results.mean()
+	results /= results.std()
+	net.train(boards, results, directions, rounds = 1)
+	net.save('basic.net')
 
 
 if __name__ == '__main__':
-	#create_train()
+	if not exists('traindata.npz'):
+		create_train()
 	train_NN()
 
 

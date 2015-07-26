@@ -2,6 +2,7 @@
 from game import Game
 from numpy import copy, array, zeros, clip, float32
 from numpy.random import RandomState
+import pickle
 from nnet import make_net
 
 
@@ -137,21 +138,26 @@ class NNAI(BaseAI):
 	"""
 	def __init__(self, game_kwargs = {}):
 		super().__init__(game_kwargs = game_kwargs)
-		self.nn = make_net(self.game.W, self.game.H)
+		self.nn = make_net(self.game.W, self.game.H, size1 = 45, size2 = 35)
 
-	def train(self, batch, results, choices):
-		wanted = self.nn.predict_proba(batch).astype(float32)
-		#print(wanted[:, choices].mean())
-		#print(abs(results).mean())
-		#wanted[:, choices] += results / 5
-		offset = zeros(wanted.shape, dtype = float32)
-		for k, choice in enumerate(choices):
-			offset[k, choice] = results[k] / 3
-		#print(Q)
-		#print(self.nn.predict_proba(batch) - wanted)
-		#print(choices)
-		goal = clip(wanted + offset, 0, 1)
-		print(self.nn.fit(batch, goal))
+	@classmethod
+	def load(self, fname):
+		with open(fname, 'rb') as fh:
+			return pickle.load(fh)
+
+	def save(self, fname):
+		with open(fname, 'wb+') as fh:
+			pickle.dump(self, fh)
+
+	def train(self, batch, results, choices, rounds = 3):
+		#todo: more than 3 doesn't seem to do much atm, check later
+		for rnd in range(rounds):
+			wanted = self.nn.predict_proba(batch).astype(float32)
+			offset = zeros(wanted.shape, dtype = float32)
+			for k, choice in enumerate(choices):
+				offset[k, choice] = results[k] / 3
+			goal = clip(wanted + offset, 0, 1)
+			self.nn.fit(batch, goal)
 
 	def predict(self, D):
 		"""
@@ -172,8 +178,11 @@ class NNAI(BaseAI):
 
 
 if __name__ == '__main__':
+	def nngen(game_kwargs = {}):
+		nngen.__name__ = 'NeuralNet'
+		return NNAI.load('basic.net')
 	N = 5
-	AIs = (RandomAI, FreeAI, NeighbourAI, StayDownAI, FreeNBDownAI, NNAI)
+	AIs = (RandomAI, FreeAI, NeighbourAI, StayDownAI, FreeNBDownAI, NNAI, nngen)
 	print('comparing {0:d} AIs, {1:d} iterations each'.format(len(AIs), N))
 	print('AI name           turns  score    max')
 	for AI in AIs:
