@@ -1,10 +1,11 @@
 
 from nolearn.lasagne import NeuralNet, BatchIterator, TrainSplit
-from numpy import inf, copy
+from numpy import inf, copy, float32
 from lasagne.updates import nesterov_momentum
 from lasagne.layers import InputLayer, DenseLayer
 from lasagne.nonlinearities import softmax, LeakyRectify
 from lasagne.init import HeNormal, Normal, Constant
+from theano import shared
 
 
 class StopWhenOverfitting(object):
@@ -32,6 +33,17 @@ class StopAfterMinimum(object):
 			raise StopIteration('loss increasing')
 
 
+class AdjustVariable(object):
+	def __init__(self, name, start = 1., stop = 0.005):
+		self.start, self.stop = start, stop
+
+	def __call__(self, nn, train_history):
+		epoch = train_history[-1]['epoch']
+		print(self.stop + (self.start - self.stop) * epoch / nn.max_epochs)
+		new_value = float32(self.stop + (self.start - self.stop) * epoch / nn.max_epochs)
+		getattr(nn, 'update_learning_rate').set_value(new_value)
+
+
 inp = InputLayer(shape = (None, 16,))
 DenseLayer(**{
 	'W': HeNormal(),
@@ -43,7 +55,7 @@ DenseLayer(**{
 }) #todo
 
 
-def make_net(W, H, size1 = 20, size2 = 15, epochs = 200):
+def make_net(W, H, size1 = 20, size2 = 15):
 	net = NeuralNet(
 		layers = [
 			('input',  InputLayer),
@@ -70,10 +82,10 @@ def make_net(W, H, size1 = 20, size2 = 15, epochs = 200):
 		output_b = Constant(),
 
 		update = nesterov_momentum,  # todo
-		update_learning_rate = 1.,
+		update_learning_rate = shared(float32(1.)),
 		update_momentum = 0.7,
 
-		max_epochs = epochs,
+		max_epochs = 200,
 		#on_epoch_finished = [
 		#	StopWhenOverfitting(),
 		#	StopAfterMinimum(),
