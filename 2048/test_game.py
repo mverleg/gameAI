@@ -22,10 +22,8 @@ def run_move_test(tests):
 	for actions, W, H, init, result in tests:
 		g = Game(W = W, H = H, empty = True, quiet = True)
 		g.M[: :] = init
-		g.show(True)
 		for action in actions:
 			getattr(g, action)(test = False)
-		g.show(True)
 		assert equal(g.M, result).all(), 'Failed for {0:s} {1:s} -> {2:s}, got {3:s}'.format(action, str(init), str(result), str(g.M))
 
 
