@@ -18,8 +18,8 @@ def move_pred(game, predictions):
 
 
 class BaseAI():
-	def __init__(self, game_kwargs = {}):
-		self.game = Game(**game_kwargs)
+	def __init__(self, game={}):
+		self.game = game
 		#print(self.__class__.__name__)
 
 
@@ -27,8 +27,8 @@ class RandomAI(BaseAI):
 	"""
 		Make random moves.
 	"""
-	def __init__(self, seed = 4242, game_kwargs = {}):
-		super().__init__(game_kwargs = game_kwargs)
+	def __init__(self, game, seed = None):
+		super().__init__(game = game)
 		self.random = RandomState(seed)
 
 	def play(self):
@@ -100,12 +100,39 @@ class NeighbourAI(BaseAI):
 			running = self.play_step()[0]
 
 
+class Moment11(BaseAI):
+	"""
+		Make the (1,1) image moment as high as possible (meaning high values are in a specific corner).
+	"""
+	def score(self, M):
+		Z = 0
+		for m in range(self.game.M.shape[0]):
+			for n in range(self.game.M.shape[1]):
+				Z += (m + n) * 2**M[m, n]
+		return Z
+
+	def play_step(self):
+		scores = array([
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = True, dir = +1, test = False)[1]),
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = False, dir = +1, test = False)[1]),
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = True, dir = -1, test = False)[1]),
+			self.score(self.game.board_move(copy(self.game.M), 0, hor = False, dir = -1, test = False)[1])
+		])
+		scores[1] += 1
+		return move_pred(self.game, scores)
+
+	def play(self):
+		running = True
+		while running:
+			running = self.play_step()[0]
+
+
 class FreeNBDownAI(BaseAI):
 	"""
 		Combination of the above
 	"""
-	def __init__(self, neighbour_strength = 6, game_kwargs = {}):
-		super().__init__(game_kwargs = game_kwargs)
+	def __init__(self, game, neighbour_strength = 6):
+		super().__init__(game = game)
 		self.neighbour_strength = neighbour_strength
 
 	def score(self, M):
@@ -132,12 +159,27 @@ class FreeNBDownAI(BaseAI):
 			running = move_pred(self.game, scores)[0]
 
 
+
+class AltDownRight(BaseAI):
+
+	def __init__(self, game, neighbour_strength = 6):
+		super().__init__(game = game)
+		self.current = array([4, 3, 2, 1])
+		self.next = array([3, 4, 2, 1])
+
+	def play(self):
+		running = True
+		while running:
+			self.current, self.next = self.next, self.current
+			running = move_pred(self.game, self.current)[0]
+
+
 class NNAI(BaseAI):
 	"""
 		Use Lasagne neural network to teach the AI to play.
 	"""
-	def __init__(self, game_kwargs = {}):
-		super().__init__(game_kwargs = game_kwargs)
+	def __init__(self, game):
+		super().__init__(game = game)
 		self.nn = make_net(self.game.W, self.game.H, size1 = 45, size2 = 35)
 
 	@classmethod
@@ -178,17 +220,18 @@ class NNAI(BaseAI):
 
 
 if __name__ == '__main__':
-	def nngen(game_kwargs = {}):
+	def nngen(game):
 		nngen.__name__ = 'NeuralNet'
 		return NNAI.load('basic.net')
-	N = 5
-	AIs = (RandomAI, FreeAI, NeighbourAI, StayDownAI, FreeNBDownAI, NNAI, nngen)
+	N = 20
+	AIs = (RandomAI, FreeAI, NeighbourAI, Moment11, StayDownAI, FreeNBDownAI, AltDownRight)#, NNAI, nngen)
 	print('comparing {0:d} AIs, {1:d} iterations each'.format(len(AIs), N))
 	print('AI name           turns  score    max')
 	for AI in AIs:
 		Q = zeros((N, 3), dtype = int)
 		for k in range(N):
-			plyr = AI(game_kwargs = {'seed': 4242 + k, 'quiet': True})
+			game = Game(seed = 4242 + k, quiet = True)
+			plyr = AI(game = game)
 			plyr.play()
 			Q[k, :] = plyr.game.turn, plyr.game.score, 2**plyr.game.M.max()
 		print('{0:16s}  {1:5d}  {2:5d}  {3:5d}'.format(AI.__name__, *Q.sum(0) // N))

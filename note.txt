@@ -4,4 +4,11 @@ Then train neural network on this data. Only the first iteration shows significa
 I didn't add other features or guidelines (like empty space, neighbours etc) because the goal is for the NN to learn.
 Overall it took about 10-12 hours and I'm out of time, so abandoning it for now.
 
+This video https://www.youtube.com/watch?v=jsVnuw5Bv0s normalized the board so that highest tile is 1.
+Here https://datascience.stackexchange.com/questions/6591 notes that there's rotation symmetry, maybe use image moments
+
+I think maybe the behaviour is wrong for things like 2202 when moving right
+
+Aligning equivalent boards is working now! Aug 4th 2015
+
 
