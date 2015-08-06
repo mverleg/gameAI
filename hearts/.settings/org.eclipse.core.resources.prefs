@@ -1,0 +1,10 @@
+eclipse.preferences.version=1
+encoding//AIs/human_ai.py=utf-8
+encoding//AIs/low1st_ai.py=utf-8
+encoding//AIs/random_ai.py=utf-8
+encoding/base_ai.py=utf-8
+encoding/card.py=utf-8
+encoding/game.py=utf-8
+encoding/main.py=utf-8
+encoding/state.py=utf-8
+encoding/util.py=utf-8

@@ -1,0 +1,11 @@
+Double cards are appearing sometimes
+Hearts AI: keep track of all the cards each other player may have at which approximate probability. Take into account your cards, passed cards (100% for receiver, 0% for others), colors not admitted. Is there a fast way to calculate "possible distributions with player X having Y vs total possible distributions"
+If I do a hearts NN AI, probably the best way to have it recognize starter hands is to make a 52D input of booleans indicating if I have the card. Maybe with another 52 of which have been played and a few other things (active cards and turn etc), it could learn quickly given training data. It could beat the random AI by watching it and learning only from the winning player.
+Could terminate as soon as all points are gone
+
+- Isolate colours
+- Get rid of top3 spades
+
+also chance that next player has no hearts
+
+
