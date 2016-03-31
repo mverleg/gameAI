@@ -1,3 +1,5 @@
+from numpy import zeros
+
 
 class Cell:
 	def __init__(self, left=False, right=False, top=False, bottom=False):
@@ -50,9 +52,17 @@ class Cell:
 	def __str__(self):
 		return self.symbols[self.left, self.right, self.top, self.bottom]
 
+	def turn_right(self):
+		self.right, self.top, self.left, self.bottom = self.top, self.left, self.bottom, self.right
+
+	def is_empty(self):
+		return not(self.left or self.right or self.top or self.bottom)
+
 
 class Grid:
 	def __init__(self, width=6, height=10):
+		self.width = width
+		self.height = height
 		self.cells = []
 		for k in range(height):
 			self.cells.append(list(Cell() for m in range(width)))
@@ -60,22 +70,27 @@ class Grid:
 	def __getitem__(self, indx):
 		if len(indx) != 2:
 			raise IndexError('Grid needs a 2D index, not <{0:}>'.format(indx))
+		if indx[0] < 0 or indx[1] < 0:
+			raise IndexError('Grid does not accept negative indices <{0:}, {1:}>'.format(*indx))
+		# if indx[0] < 0 or indx[0] >= self.height or indx[1] < 0 or indx[1] >= self.width:
+		# 	return Cell()
 		return self.cells[indx[0]][indx[1]]
 
-	# def __setitem__(self, indx, val):
-	# 	if len(indx) != 2:
-	# 		raise IndexError('Grid needs a 2D index')
-	# 	if not isinstance(val, Cell):
-	# 		raise ValueError('Grid can only store Cells, not <{0:}>'.format(val))
-	# 	self.cells[indx[0]][indx[1]] = val
+	def __setitem__(self, indx, val):
+		#unused?
+		if len(indx) != 2:
+			raise IndexError('Grid needs a 2D index')
+		if not isinstance(val, Cell):
+			raise ValueError('Grid can only store Cells, not <{0:}>'.format(val))
+		self.cells[indx[0]][indx[1]] = val
 
 	def get_txt(self):
-		parts = ['   ']
+		parts = ['  ']
 		for m in range(len(self.cells[0])):
 			parts.append('{0:2d}'.format(m + 1))
 		parts.append('\n')
 		for k, row in enumerate(self.cells):
-			parts.append('{0:2d} '.format(k))
+			parts.append('{0:2d} '.format(k + 1))
 			for value in row:
 				parts.append(str(value) + ' ')
 			parts.append('\n')
@@ -118,12 +133,20 @@ class Grid:
 		with open(path, 'r') as fh:
 			for line in fh.read().splitlines():
 				data.append(list(cls.hex_map_rev[val] for val in line))
-		print(data)
 		return cls.from_ints(data)
 
+	def __iter__(self):
+		for k, row in enumerate(self.cells):
+			for m, cell in enumerate(row):
+				# if not cell.is_empty():
+				yield k, m, cell
 
-field = Grid.load('../levels/10')
 
-print(str(field))
+if __name__ == '__main__':
+	field = Grid.load('../levels/10')
+	print(str(field))
+	field = Grid()
+	field[3,0] = Cell(left=True, right=True)
+	print(str(field))
 
 
