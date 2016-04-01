@@ -1,4 +1,3 @@
-from numpy import zeros
 
 
 class Cell:
@@ -32,14 +31,14 @@ class Cell:
 	symbols = {
 		# left, right, top, bottom
 		(False, False, False, False): u' ',  # 0
-		(False, False, False, True ): u'∨',
-		(False, False, True , False): u'∧',
+		(False, False, False, True ): u'∧',
+		(False, False, True , False): u'∨',
 		(False, False, True , True ): u'║',
-		(False, True , False, False): u'>',  # 4
+		(False, True , False, False): u'<',  # 4
 		(False, True , False, True ): u'╔',
 		(False, True , True , False): u'╚',
 		(False, True , True , True ): u'╠',
-		(True , False, False, False): u'<',  # 8
+		(True , False, False, False): u'>',  # 8
 		(True , False, False, True ): u'╗',
 		(True , False, True , False): u'╝',
 		(True , False, True , True ): u'╣',
@@ -60,7 +59,7 @@ class Cell:
 
 
 class Grid:
-	def __init__(self, width=6, height=10):
+	def __init__(self, width=7, height=11):
 		self.width = width
 		self.height = height
 		self.cells = []
@@ -118,6 +117,7 @@ class Grid:
 
 	hex_map = {0: '0', 1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: 'A', 11: 'B', 12: 'C', 13: 'D', 14: 'E', 15: 'E'}
 	hex_map_rev = {v: k for k, v in hex_map.items()}
+	hex_map_rev.update({'v': 5, '^': 5, 'x': 15, '+': 15, 'l': 3, 'I': 3, '*': 1, '.': 1, 'y': 7, 'r': 7, ' ': 0})
 
 	def save(self, path):
 		data = self.to_ints()
@@ -141,9 +141,15 @@ class Grid:
 				# if not cell.is_empty():
 				yield k, m, cell
 
+	def copy(self):
+		clone = self.__class__(width=self.width, height=self.height)
+		for k, m, cell in self:
+			clone[k, m] = Cell.create_from_int(cell.to_int())
+		return clone
+
 
 if __name__ == '__main__':
-	field = Grid.load('../levels/10')
+	field = Grid.load('../levels/52')
 	print(str(field))
 	field = Grid()
 	field[3,0] = Cell(left=True, right=True)
