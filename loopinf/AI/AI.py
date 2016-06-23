@@ -10,7 +10,7 @@ class NoMoreDeductiveSteps(Exception):
 	pass
 
 
-field = Grid.load('../levels/52')
+field = Grid.load('../levels/performance')
 
 
 def show_accessible_count(field):
@@ -126,7 +126,7 @@ def attempt(field):
 			if len(cell.accessible) > 1:
 				for state in cell.accessible:
 					cell.update_from_int(state)
-					print('RECURSION LEVEL FOR', cell, 'AT', k, m)
+					# print('RECURSION LEVEL FOR', cell, 'AT', k, m)
 					subfield = field.copy()
 					for sk, sm, subcell in field:
 						# print('SET', sk, sm, 'TO', subcell.accessible)

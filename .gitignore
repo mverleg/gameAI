@@ -1,3 +1,5 @@
 nolearn/
 *.npz
 *.net
+__pycache__/
+.idea/
